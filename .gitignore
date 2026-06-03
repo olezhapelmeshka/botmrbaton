@@ -1,0 +1,40 @@
+# Игнорируем виртуальные окружения
+.venv/
+venv/
+env/
+
+# Игнорируем настройки IDE
+.idea/
+
+# Игнорируем кеши Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Игнорируем конфигурационные файлы с секретами
+.env
+.env.local
+.env.*.local
+# но НЕ игнорируем шаблон
+!.env.example
+
+# Игнорируем локальные данные (всё runtime, личные чаты, напоминания и т.д.)
+data/
+# Разрешаем закоммитить только маркер (чтобы папка существовала в репо)
+!data/.gitkeep
+
+# Логи и временные файлы
+logs/
+tmp/
+*.log
+*.tmp
+*.bak
+
+# Дополнительно — на случай старых установок
+data/memory.json
+data/notebook.json
+data/workspace.json
+data/files/
+data/schedules/
+data/interests/
+data/youtube_*/
