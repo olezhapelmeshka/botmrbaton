@@ -21,6 +21,8 @@
 
 Весь стек рассчитан на **$0** : текст — `glm-4.5-flash` на Z.ai, картинки — `google/gemini-2.5-flash` на OpenRouter. Код открыт (MIT).
 
+Как устроены gate, casual/agent и модули — в [docs/architecture.md](docs/architecture.md).
+
 ---
 
 ## Примеры
@@ -134,78 +136,125 @@ bash scripts/install_launchagent.sh
 
 # Mr. Baton (English)
 
-A **free** way to run your own Telegram AI assistant: open-source code + free/cheap OpenAI-compatible APIs (GLM on Z.ai for text, Gemini on OpenRouter for vision). No ChatGPT subscription, no GPU required.
+A **free** way to make your own Telegram assistant with personality: no ChatGPT subscription, no GPU of your own — just open-source code + free/cheap APIs (GLM on Z.ai, vision via OpenRouter).
 
-**Try it live:** [t.me/misterbatonbot](https://t.me/misterbatonbot)  
-**License:** MIT
+It chats in DMs and groups, searches the web, looks at photos, works with files, and sets reminders.
+
+**Open the bot:** [t.me/misterbatonbot](https://t.me/misterbatonbot)  
+You can message it right away or add it to a group like a normal bot. Your own instance takes a couple of minutes with the steps below.
+
+---
 
 ## What it is
 
-Not a corporate helpdesk bot — a character-first chat agent with real tooling:
+Not a corporate assistant — a lively chat partner with a tool-using agent under the hood:
 
-| Capability | Details |
-|------------|---------|
-| Chat + memory | Per-chat history, anti-repeat hygiene |
-| Web search | DuckDuckGo HTML (no extra API key) |
-| Vision | Separate multimodal endpoint for photos |
-| Files | Read/create PDF, DOCX, XLSX, TXT, MD, CSV, JSON, PPTX |
-| Notebook & reminders | Per-chat notes; once / daily / weekly / interval |
-| Group intelligence | Gate → LLM “should I reply?” → `casual` or full `agent` path |
+- chat with per-chat memory  
+- web search  
+- vision (photos)  
+- files PDF / DOCX / XLSX / …  
+- notebook and reminders  
 
-## Free stack (recommended)
+The whole stack is aimed at **$0** (or nearly $0): text — `glm-4.5-flash` on Z.ai, images — `google/gemini-2.5-flash` on OpenRouter. Code is open (MIT).
 
-| Role | Provider | Where to get the key | Model ID | Base URL |
-|------|----------|----------------------|----------|----------|
-| Text | [Z.ai](https://z.ai/model-api) | [API Keys](https://z.ai/manage-apikey/apikey-list) | `glm-4.5-flash` | `https://api.z.ai/api/paas/v4` |
-| Vision | [OpenRouter](https://openrouter.ai) | [Keys](https://openrouter.ai/keys) | `google/gemini-2.5-flash` | `https://openrouter.ai/api/v1` |
-| Bot token | Telegram | [@BotFather](https://t.me/BotFather) | — | — |
+How the gate, casual/agent paths, and modules work — see [docs/architecture.md](docs/architecture.md).
 
-Free tiers still have rate limits — that is expected. For a personal or small-group assistant this stack is enough to run at **$0**.
+---
 
-## Architecture
+## Examples
 
-```mermaid
-flowchart TD
-  TG[Telegram long poll] --> Gate[GroupGate]
-  Gate --> Decider[LLMResponseDecider]
-  Decider -->|casual| Light[light_responder]
-  Decider -->|agent| Agent[agent loop]
-  Agent --> Tools[tools.dispatch]
-  Agent --> LLM[text model GLM]
-  Agent --> Vision[vision model Gemini]
-  Light --> LLM
-  Tools --> Search[DuckDuckGo]
-  Tools --> Files[workspace]
-  Tools --> Notes[notebook]
-  Tools --> Reminders[scheduler]
-```
+Live bot: [t.me/misterbatonbot](https://t.me/misterbatonbot) — DM it or add it to a group.
 
-More detail: [docs/architecture.md](docs/architecture.md).
+Screenshots of chat / search / vision / group can go in `docs/examples/` (`01-chat.png` … `04-group.png`).
 
-## Quick start
+---
+
+## Quick start (your own bot)
+
+You need: Python 3.10+, a Telegram token, a **text key (Z.ai)**, and a **vision key (OpenRouter)**.
+
+### 1) Telegram
+
+1. [@BotFather](https://t.me/BotFather) → `/newbot` (or `/token`) → copy the token → `TELEGRAM_BOT_TOKEN`
+2. [@userinfobot](https://t.me/userinfobot) → your numeric id → `OWNER_USER_ID`
+
+### 2) Text — Z.ai (`glm-4.5-flash`)
+
+This is the main chat engine (cheap/free GLM).
+
+1. Open [z.ai/model-api](https://z.ai/model-api) → sign up / log in  
+2. Key: [z.ai/manage-apikey/apikey-list](https://z.ai/manage-apikey/apikey-list) → **Create API Key** → copy → `OPENAI_API_KEY`  
+3. Model: in `.env` set exactly `OPENAI_MODEL=glm-4.5-flash`  
+   (model card: [docs.z.ai — GLM-4.5](https://docs.z.ai/guides/llm/glm-4.5))  
+4. Base URL (do not change): `OPENAI_BASE_URL=https://api.z.ai/api/paas/v4`
+
+OpenAI-compatible SDK docs: [docs.z.ai](https://docs.z.ai/guides/develop/openai/python).
+
+### 3) Images — OpenRouter (`google/gemini-2.5-flash`)
+
+A separate key only for vision (photos). Text still goes to Z.ai.
+
+1. Open [openrouter.ai](https://openrouter.ai) → Sign In  
+2. Key: [openrouter.ai/keys](https://openrouter.ai/keys) → **Create API Key** → copy → `OPENAI_VISION_API_KEY`  
+3. Model: page [google/gemini-2.5-flash](https://openrouter.ai/google/gemini-2.5-flash) → in `.env` set exactly  
+   `OPENAI_VISION_MODEL=google/gemini-2.5-flash`  
+4. Base URL (do not change): `OPENAI_VISION_BASE_URL=https://openrouter.ai/api/v1`
+
+### 4) Install and `.env`
 
 ```bash
 git clone https://github.com/olezhapelmeshka/botmrbaton.git
 cd botmrbaton
-python3 -m venv .venv && source .venv/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-bash scripts/setup_env.sh    # or copy .env.example → .env and fill keys
+```
+
+Keys via terminal (interactive):
+
+```bash
+bash scripts/setup_env.sh
+```
+
+Or in one shot (paste your values):
+
+```bash
+cp .env.example .env
+cat > .env <<'EOF'
+TELEGRAM_BOT_TOKEN=123456:ABC...
+OWNER_USER_ID=123456789
+
+# text = Z.ai API Key + glm-4.5-flash
+OPENAI_API_KEY=paste_key_from_z.ai_manage-apikey
+OPENAI_BASE_URL=https://api.z.ai/api/paas/v4
+OPENAI_MODEL=glm-4.5-flash
+
+# images = OpenRouter API Key + google/gemini-2.5-flash
+OPENAI_VISION_API_KEY=paste_key_from_openrouter.ai_keys
+OPENAI_VISION_BASE_URL=https://openrouter.ai/api/v1
+OPENAI_VISION_MODEL=google/gemini-2.5-flash
+EOF
+```
+
+Run:
+
+```bash
 python bot/main.py
 ```
 
-macOS always-on (login + crash restart):
+Always-on on macOS (autostart + restart on crash):
 
 ```bash
 bash scripts/install_launchagent.sh
 ```
 
-Tests:
+> The public instance [@misterbatonbot](https://t.me/misterbatonbot) is already running. The script above is for your own copy.
 
-```bash
-pytest -q
-```
+---
 
-## Project history
+## Short project history
 
-- **June 2026** — first working personal bot (character prompts, tools, group gate); pre-release on GitHub.  
-- **July 2026** — public portfolio release: depersonalized prompts, MIT, CI/tests, anti-meme looping, free-stack docs, live [@misterbatonbot](https://t.me/misterbatonbot).
+- **June 2026** — first working version: personal Telegram bot with character, memory, tools, and group gate; pre-release on GitHub.  
+- **July 2026** — public portfolio release: depersonalized prompts, MIT, tests/CI, anti-meme looping, README with a free stack walkthrough (Z.ai + OpenRouter), live [@misterbatonbot](https://t.me/misterbatonbot).
+
+The idea from day one: show that a normal AI assistant in Telegram can be built **for free** on open models, without a corporate helpdesk tone.
