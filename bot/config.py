@@ -177,7 +177,7 @@ GROUP_INTEREST_KEYWORDS: list[str] = (
 GROUP_TRIGGER_WORDS: list[str] = [
     "мистер батон", "мр батон", "батон", "mr baton", "mister baton",
     "батончик",
-    "ботик", "ботяра", "бот",
+    "ботик", "ботяра",
 ]
 
 GROUP_ALLOW_REPLY_TRIGGER: bool = True

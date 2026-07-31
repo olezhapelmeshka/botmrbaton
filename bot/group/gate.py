@@ -7,26 +7,23 @@ should be processed by the agent.
 
 from __future__ import annotations
 
+import re
 import time
-from dataclasses import dataclass
 
 from bot.group.access import get_user_level
 from bot.group.config import GroupGateConfig
 from bot.group.context import GroupContext
-from bot.group.decision import LLMResponseDecider, ResponseDecider
+from bot.group.decision import ResponseDecider
 from bot.group.rate_limiter import RateLimiter
 from bot.group.spam import SpamDetector
-from bot.group.context import MessageSnapshot
 from bot.group.types import GateReason, GateResult, UserLevel
 
 
 class GroupGate:
     """
-    Modern, extensible Group Gate with optional LLM decision layer.
-
-    When `response_decider` is provided (recommended for lively behavior),
-    every message in proactive groups will be evaluated by a fast model (GLM)
-    before deciding whether to wake up the full agent.
+    Group Gate: in groups, process only mention / reply-to-this-bot / trigger words.
+    Private chats always process. Optional response_decider is kept for API compat
+    but is not used for wake decisions.
     """
 
     def __init__(
@@ -38,7 +35,7 @@ class GroupGate:
         self.context = GroupContext(config)
         self.rate_limiter = RateLimiter(config)
         self.spam_detector = SpamDetector(config)
-        self.response_decider = response_decider  # LLM-based decider (GLM)
+        self.response_decider = response_decider
 
     def should_process_message(self, message: dict) -> GateResult:
         """
@@ -66,27 +63,19 @@ class GroupGate:
         # Update conversation context
         self.context.add_message(user_id, text, time.time())
 
-        # === 2. Determine user level ===
         level = get_user_level(user_id, self.config)
 
-        # === 3. Owner and VIP bypass most checks ===
-        if level == UserLevel.OWNER:
-            return GateResult(True, GateReason.OWNER, text, level)
-
-        if level == UserLevel.VIP:
-            return GateResult(True, GateReason.VIP, text, level)
-
-        # === 4. Rate limiting ===
+        # === 2. Rate limiting ===
         if not self.rate_limiter.is_allowed(user_id, level):
             return GateResult(False, GateReason.RATE_LIMITED, text, level)
 
-        # === 5. Spam / Flood protection ===
+        # === 3. Spam / Flood protection ===
         is_spam, spam_reason = self.spam_detector.check(user_id, text)
         if is_spam:
             reason = GateReason.SPAM_DUPLICATE if spam_reason == "duplicate" else GateReason.SPAM_FLOOD
             return GateResult(False, reason, text, level)
 
-        # === 6. Hard triggers (always process) ===
+        # === 4. Hard triggers only (mention / reply / keywords) ===
         bot_username = self.config.extra.get("bot_username", "")
         if self._has_mention(text, bot_username):
             return GateResult(True, GateReason.MENTION, self._clean_mention(text, bot_username), level)
@@ -97,51 +86,6 @@ class GroupGate:
         if self._contains_explicit_trigger(text):
             return GateResult(True, GateReason.EXPLICIT_TRIGGER, text, level)
 
-        # === 7. LLM-based decision layer (makes the bot feel alive) ===
-        if self.response_decider is not None and self.config.enable_proactive_mode:
-            recent = self.context.get_recent_messages()
-            current = MessageSnapshot(user_id, text, time.time())
-
-            decision = self.response_decider.should_respond(
-                recent_messages=recent,
-                current_message=current,
-            )
-
-            if decision.should_respond:
-                return GateResult(
-                    True,
-                    GateReason.CONTEXT_RELEVANT,
-                    text,
-                    level,
-                    metadata={
-                        "llm_decision": True,
-                        "reason": decision.reason,
-                        "confidence": decision.confidence,
-                        "suggested_path": decision.path,
-                        "reminder_request": decision.reminder_request,
-                    },
-                )
-            else:
-                # LLM decided not to respond — we can still allow very rare spontaneous messages
-                # (optional: add small probability here later)
-                return GateResult(False, GateReason.IGNORED, text, level)
-
-        # === 8. Fallback: simple keyword/context relevance ===
-        relevance = self.context.calculate_relevance_score(self.config.interest_keywords)
-        if relevance >= self.config.context_relevance_threshold:
-            return GateResult(
-                True,
-                GateReason.CONTEXT_RELEVANT,
-                text,
-                level,
-                metadata={"relevance_score": round(relevance, 2)}
-            )
-
-        # === 9. Legacy proactive mode (without LLM) ===
-        if self.config.enable_proactive_mode:
-            return GateResult(True, GateReason.PROACTIVE, text, level)
-
-        # === Default: ignore ===
         return GateResult(False, GateReason.IGNORED, text, level)
 
     # --- Helper methods ---
@@ -154,18 +98,30 @@ class GroupGate:
     def _clean_mention(self, text: str, bot_username: str) -> str:
         if not bot_username:
             return text
-        import re
         return re.sub(rf"@?{re.escape(bot_username)}", "", text, flags=re.IGNORECASE).strip()
 
     def _is_reply_to_bot(self, message: dict) -> bool:
         reply_to = message.get("reply_to_message") or {}
         reply_from = reply_to.get("from") or {}
-        return bool(reply_from.get("is_bot"))
+        if not reply_from.get("is_bot"):
+            return False
+        bot_id = self.config.extra.get("bot_id")
+        if bot_id is not None:
+            return reply_from.get("id") == bot_id
+        return True
 
     def _contains_explicit_trigger(self, text: str) -> bool:
-        """Legacy trigger words from old system (can be moved to config)."""
-        # For backward compatibility with old GROUP_TRIGGER_WORDS
-        # In real usage this should come from config.
+        """Word-boundary match against GROUP_TRIGGER_WORDS (unicode-aware)."""
         from bot.config import GROUP_TRIGGER_WORDS
+
+        if not text:
+            return False
         low = text.lower()
-        return any(t in low for t in GROUP_TRIGGER_WORDS)
+        for tw in GROUP_TRIGGER_WORDS:
+            tw = (tw or "").strip().lower()
+            if not tw:
+                continue
+            pat = r"(?<![\w])" + re.escape(tw) + r"(?![\w])"
+            if re.search(pat, low, re.UNICODE):
+                return True
+        return False

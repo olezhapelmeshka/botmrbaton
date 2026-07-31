@@ -25,7 +25,6 @@ from bot import (
     memory, scheduler, schedules, telegram_api, workspace,
 )
 from bot.group import GroupGate, GroupGateConfig
-from bot.group.decision import LLMResponseDecider  # GLM as decision layer
 from bot import light_responder  # новый лёгкий путь для семейной болтовни (casual)
 
 
@@ -902,24 +901,19 @@ def run() -> None:
             enable_proactive_mode=config.GROUP_PROACTIVE_MODE,
         )
         gate_config.extra["bot_username"] = _bot_username
+        if me and me.get("id") is not None:
+            gate_config.extra["bot_id"] = me.get("id")
 
-        # === Главное улучшение: GLM решает, отвечать ли ===
-        # Каждое сообщение в proactive-группах проходит через дешёвый GLM
-        # для принятия решения "стоит ли Мистеру Батону ответить?"
+        # Proactive/LLM wake path disabled: groups reply only on mention/reply/triggers.
         response_decider = None
         if config.GROUP_PROACTIVE_MODE:
-            try:
-                response_decider = LLMResponseDecider(
-                    model=config.OPENAI_MODEL,   # обычно glm-4.5-flash
-                    temperature=0.65,
-                    max_tokens=50,
-                )
-                logger.info("LLM Response Decider (GLM) включён — бот будет более живым")
-            except Exception as e:
-                logger.warning("Не удалось создать LLMResponseDecider: %s", e)
+            logger.info(
+                "GROUP_PROACTIVE_MODE=true ignored — strict triggers only "
+                "(mention / reply-to-bot / trigger words)"
+            )
 
         _group_gate = GroupGate(gate_config, response_decider=response_decider)
-        logger.info("GroupGate инициализирован (новая система + LLM decider)")
+        logger.info("GroupGate инициализирован (strict triggers)")
 
     except Exception as e:
         logger.exception("Не удалось инициализировать GroupGate: %s", e)
