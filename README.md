@@ -38,7 +38,36 @@
 
 ## Быстрый запуск своего бота
 
-Нужны: Python 3.10+, токен от [@BotFather](https://t.me/BotFather), ключ текста (например [Z.ai](https://z.ai)), опционально vision (например [OpenRouter](https://openrouter.ai/keys)).
+Нужны: Python 3.10+, токен Telegram, **ключ текста (Z.ai)** и **ключ vision (OpenRouter)**.
+
+### 1) Telegram
+
+1. [@BotFather](https://t.me/BotFather) → `/newbot` (или `/token`) → скопируй токен → это `TELEGRAM_BOT_TOKEN`
+2. [@userinfobot](https://t.me/userinfobot) → свой числовой id → это `OWNER_USER_ID`
+
+### 2) Текст — Z.ai (`glm-4.5-flash`)
+
+Это основной чат-движок бота (дешёвый/бесплатный GLM).
+
+1. Открой [z.ai/model-api](https://z.ai/model-api) → зарегистрируйся / войди  
+2. Ключ: [z.ai/manage-apikey/apikey-list](https://z.ai/manage-apikey/apikey-list) → **Create API Key** → копируй → это `OPENAI_API_KEY`  
+3. Модель: в `.env` пиши ровно `OPENAI_MODEL=glm-4.5-flash`  
+   (карточка модели: [docs.z.ai — GLM-4.5](https://docs.z.ai/guides/llm/glm-4.5))  
+4. Base URL (не меняй): `OPENAI_BASE_URL=https://api.z.ai/api/paas/v4`
+
+Документация OpenAI-совместимого SDK: [docs.z.ai](https://docs.z.ai/guides/develop/openai/python).
+
+### 3) Картинки — OpenRouter (`google/gemini-2.5-flash`)
+
+Отдельный ключ только для vision (фото). Текст по-прежнему идёт в Z.ai.
+
+1. Открой [openrouter.ai](https://openrouter.ai) → Sign In  
+2. Ключ: [openrouter.ai/keys](https://openrouter.ai/keys) → **Create API Key** → копируй → это `OPENAI_VISION_API_KEY`  
+3. Модель: страница [google/gemini-2.5-flash](https://openrouter.ai/google/gemini-2.5-flash) → в `.env` пиши ровно  
+   `OPENAI_VISION_MODEL=google/gemini-2.5-flash`  
+4. Base URL (не меняй): `OPENAI_VISION_BASE_URL=https://openrouter.ai/api/v1`
+
+### 4) Установка и `.env`
 
 ```bash
 git clone https://github.com/olezhapelmeshka/botmrbaton.git
@@ -58,15 +87,19 @@ bash scripts/setup_env.sh
 
 ```bash
 cp .env.example .env
-cat >> .env <<'EOF'
+cat > .env <<'EOF'
 TELEGRAM_BOT_TOKEN=123456:ABC...
 OWNER_USER_ID=123456789
-OPENAI_API_KEY=...
+
+# текст = Z.ai API Key + glm-4.5-flash
+OPENAI_API_KEY=вставь_ключ_с_z.ai_manage-apikey
 OPENAI_BASE_URL=https://api.z.ai/api/paas/v4
 OPENAI_MODEL=glm-4.5-flash
-OPENAI_VISION_API_KEY=...
+
+# картинки = OpenRouter API Key + google/gemini-2.5-flash
+OPENAI_VISION_API_KEY=вставь_ключ_с_openrouter.ai_keys
 OPENAI_VISION_BASE_URL=https://openrouter.ai/api/v1
-OPENAI_VISION_MODEL=gemini-2.5-flash
+OPENAI_VISION_MODEL=google/gemini-2.5-flash
 EOF
 ```
 

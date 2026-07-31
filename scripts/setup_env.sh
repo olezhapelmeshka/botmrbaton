@@ -53,15 +53,15 @@ ask TELEGRAM_BOT_TOKEN "123456:ABC..."
 echo "Твой Telegram id: @userinfobot"
 ask OWNER_USER_ID "числовой id"
 
-echo "Текст-модель (например Z.ai GLM): https://z.ai"
-ask OPENAI_API_KEY "ключ"
+echo "Текст = Z.ai API Key (https://z.ai/manage-apikey/apikey-list) + модель glm-4.5-flash"
+ask OPENAI_API_KEY "ключ с z.ai/manage-apikey"
 ask OPENAI_BASE_URL "https://api.z.ai/api/paas/v4"
 ask OPENAI_MODEL "glm-4.5-flash"
 
-echo "Vision (например OpenRouter + Gemini): https://openrouter.ai/keys"
-ask OPENAI_VISION_API_KEY "ключ или Enter чтобы пропустить"
+echo "Vision = OpenRouter API Key (https://openrouter.ai/keys) + google/gemini-2.5-flash"
+ask OPENAI_VISION_API_KEY "ключ с openrouter.ai/keys или Enter чтобы пропустить"
 ask OPENAI_VISION_BASE_URL "https://openrouter.ai/api/v1"
-ask OPENAI_VISION_MODEL "gemini-2.5-flash"
+ask OPENAI_VISION_MODEL "google/gemini-2.5-flash"
 
 echo
 echo "Готово. Дальше:"
