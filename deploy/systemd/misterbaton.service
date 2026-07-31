@@ -1,0 +1,20 @@
+[Unit]
+Description=Mr. Baton Telegram bot (@misterbatonbot)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/misterbaton_bot
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/root/misterbaton_bot/.venv/bin/python bot/main.py
+Restart=always
+RestartSec=10
+UMask=0077
+
+# Allow writing runtime data under the project tree
+ReadWritePaths=/root/misterbaton_bot
+
+[Install]
+WantedBy=multi-user.target

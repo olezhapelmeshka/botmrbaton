@@ -44,7 +44,7 @@
 
 ## Быстрый запуск своего бота
 
-Нужны: Python 3.10+, токен Telegram, **ключ текста (Z.ai)** и **ключ vision (OpenRouter)**.
+Нужны: Python 3.9+, токен Telegram, **ключ текста (Z.ai)** и **ключ vision (OpenRouter)**.
 
 ### 1) Telegram
 
@@ -165,13 +165,22 @@ How the gate, casual/agent paths, and modules work — see [docs/architecture.md
 
 Live bot: [t.me/misterbatonbot](https://t.me/misterbatonbot) — DM it or add it to a group.
 
-Screenshots of chat / search / vision / group can go in `docs/examples/` (`01-chat.png` … `04-group.png`).
+Private chat examples:
+
+<img width="300" height="800" alt="private chat example 1" src="https://github.com/user-attachments/assets/37cfd1c7-01ce-4611-9d21-2526f6b7e2e4" />
+<img width="300" height="800" alt="private chat example 2" src="https://github.com/user-attachments/assets/bfd86a4d-389b-475d-bc3a-f3a5a45dd192" />
+
+Group chat examples:
+
+<img width="300" height="800" alt="group chat example 1" src="https://github.com/user-attachments/assets/6752fd1c-9333-4d7f-be77-f4dc443c8603" />
+<img width="300" height="800" alt="group chat example 2" src="https://github.com/user-attachments/assets/52b622bc-1a8a-4740-8468-ea6ed333a3f5" />
+<img width="300" height="800" alt="group chat example 3" src="https://github.com/user-attachments/assets/ee63a16e-cf8d-4ae6-a453-692520077d1e" />
 
 ---
 
 ## Quick start (your own bot)
 
-You need: Python 3.10+, a Telegram token, a **text key (Z.ai)**, and a **vision key (OpenRouter)**.
+You need: Python 3.9+, a Telegram token, a **text key (Z.ai)**, and a **vision key (OpenRouter)**.
 
 ### 1) Telegram
 
