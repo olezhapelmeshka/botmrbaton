@@ -19,15 +19,15 @@
 - файлы PDF / DOCX / XLSX / …  
 - блокнот и напоминания  
 
-Весь стек рассчитан на **$0** (или почти $0): текст — `glm-4.5-flash` на Z.ai, картинки — `google/gemini-2.5-flash` на OpenRouter. Код открыт (MIT).
+Весь стек рассчитан на **$0** : текст — `glm-4.5-flash` на Z.ai, картинки — `google/gemini-2.5-flash` на OpenRouter. Код открыт (MIT).
 
 ---
 
 ## Примеры
 
 Живой бот: [t.me/misterbatonbot](https://t.me/misterbatonbot) — напиши в личку или добавь в группу.
+<img width="158" height="76" alt="image" src="https://github.com/user-attachments/assets/e2008fd6-d21a-4e9f-b1bd-9fe6df29a393" />
 
-Скрины диалога / поиска / vision / группы можно положить в `docs/examples/` (`01-chat.png` … `04-group.png`).
 
 ---
 
