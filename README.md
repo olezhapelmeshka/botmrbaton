@@ -23,16 +23,9 @@
 
 ## Примеры
 
-Вставь сюда свои скрины (пути уже готовы):
+Живой бот: [t.me/misterbatonbot](https://t.me/misterbatonbot) — напиши в личку или добавь в группу.
 
-| | |
-|---|---|
-| Диалог | ![диалог](docs/examples/01-chat.png) |
-| Поиск / ответ по фактам | ![поиск](docs/examples/02-search.png) |
-| Картинка | ![vision](docs/examples/03-vision.png) |
-| В группе | ![группа](docs/examples/04-group.png) |
-
-Положи файлы в `docs/examples/` с этими именами — превью появятся сами.
+Скрины диалога / поиска / vision / группы можно положить в `docs/examples/` (`01-chat.png` … `04-group.png`).
 
 ---
 

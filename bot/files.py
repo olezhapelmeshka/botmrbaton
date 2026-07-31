@@ -9,7 +9,7 @@
 
 Запись:
 - .txt/.md/.log     — utf-8
-- .csv              — passthrough (Claude передаёт уже валидный csv)
+- .csv              — passthrough (модель передаёт уже валидный csv)
 - .json             — валидируем + pretty
 - .docx             — markdown-like → docx (заголовки, списки, абзацы)
 - .xlsx             — csv-строка → xlsx таблица

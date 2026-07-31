@@ -22,7 +22,7 @@
 
 Сценарии:
 - /schedule_add HH:MM текст  → repeat=daily по умолчанию.
-- Claude через tools может создать once/interval/daily/weekly.
+- агент через tools может создать once/interval/daily/weekly.
 """
 
 from __future__ import annotations

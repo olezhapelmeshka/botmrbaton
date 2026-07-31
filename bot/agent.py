@@ -115,7 +115,7 @@ def _auto_route(text: str, attachments: list | None, chat_type: str = "private")
     Вернуть (model, max_tokens, needs_opus_confirm).
 
     В группах по умолчанию предпочитаем GLM (дешево при высоком количестве сообщений).
-    Claude используем только когда есть картинки (vision) или очень сложная задача.
+    Более умную модель (MODEL_SMART) — для vision или сложных задач.
     """
     fast_model = MODEL_FAST
     if OPENAI_API_KEY and OPENAI_BASE_URL:
@@ -262,7 +262,7 @@ def handle_message(
       {"type": "image", "bytes": b"...", "mime": "image/jpeg", "name": "photo.jpg"}
       {"type": "document", "name": "file.pdf", "file_id": "abc123"}
 
-    Vision однократен: base64 идёт только в текущий запрос Claude,
+    Vision однократен: base64 идёт только в текущий запрос к модели,
     в memory сохраняется только текстовый плейсхолдер.
     """
     user_text = (user_text or "").strip()
@@ -334,7 +334,7 @@ def _run_agent(
     tool_call_callback: Optional[Callable[[str, dict], None]] = None,
 ) -> str:
     """Ядро агента: собирает контент, гоняет tool-цикл, возвращает ответ."""
-    current_content: list[dict[str, Any]] = []  # для Claude (с vision)
+    current_content: list[dict[str, Any]] = []  # текущий запрос (в т.ч. vision)
     memory_content: list[dict[str, Any]] = []   # для memory (без base64)
 
     for att in (attachments or []):
@@ -378,22 +378,21 @@ def _run_agent(
     else:
         memory.append_user(chat_id, memory_content)
 
-    # Упрощаем для Claude если просто текст
+    # Упрощаем до строки, если в запросе только текст
     if len(current_content) == 1 and current_content[0]["type"] == "text":
-        current_for_claude: Any = current_content[0]["text"]
+        current_payload: Any = current_content[0]["text"]
     else:
-        current_for_claude = current_content
+        current_payload = current_content
 
     # === Vision handling ===
     # Если явно настроен отдельный vision-эндпоинт (OPENAI_VISION_*) — используем его только для картинок.
-    # Иначе — стандартное поведение: attachments → MODEL_SMART (который должен быть Claude).
+    # Иначе attachments идут через основную OpenAI-compatible модель (MODEL_SMART / OPENAI_MODEL).
     has_openai_vision = bool(
         OPENAI_VISION_BASE_URL and OPENAI_VISION_MODEL and not OPENAI_VISION_MODEL.startswith("#")
     )
     use_openai_vision_endpoint = bool(attachments and has_openai_vision)
 
-    # === Принудительно используем vision-эндпоинт для всех картинок ===
-    # Это нужно, чтобы Zenoid (и любой слабый "Claude") больше не обрабатывал изображения.
+    # Принудительно отдельный vision-эндпоинт для всех картинок (если настроен).
     if attachments and has_openai_vision:
         use_openai_vision_endpoint = True
 
@@ -410,7 +409,7 @@ def _run_agent(
     for step in range(MAX_TOOL_ITERATIONS):
         if step == 0:
             history_base = memory.get(chat_id)[:-1]
-            history_to_send = history_base + [{"role": "user", "content": current_for_claude}]
+            history_to_send = history_base + [{"role": "user", "content": current_payload}]
         else:
             history_to_send = memory.get(chat_id)
         # Apply context limits (message count and total characters)
@@ -477,14 +476,10 @@ def _run_agent(
 Не обещай "ок, напомню" словами — вызови инструмент.
 """
         try:
-            # Выбор клиента:
-            # - Если используется отдельный vision-эндпоинт (Gemini, OpenRouter и т.д.) → всегда OpenAI клиент.
-            # - Иначе: если модель GLM или совпадает с OPENAI_MODEL → OpenAI клиент.
-            # - В остальных случаях → Claude клиент.
+            # Выбор клиента: всегда OpenAI-compatible (основной или отдельный vision).
             use_openai = False
 
             if use_openai_vision_endpoint:
-                # Отдельный vision (Gemini / OpenRouter / любой OpenAI-compat) — всегда идём через openai_client
                 use_openai = True
             elif OPENAI_API_KEY and OPENAI_BASE_URL:
                 if effective_model == OPENAI_MODEL or str(effective_model).startswith("glm"):
@@ -503,20 +498,19 @@ def _run_agent(
                     base_url=vision_base_url,
                 )
             else:
-                # Claude support removed. This path should no longer be reachable.
-                raise RuntimeError("Anthropic client was removed. Only OpenAI-compatible path is supported.")
+                raise RuntimeError(
+                    "OpenAI-compatible client is required. "
+                    "Set OPENAI_API_KEY + OPENAI_BASE_URL (and vision keys if needed)."
+                )
 
-            # === Важный диагностический лог для vision ===
             if attachments:
-                client_name = "OpenAI-compatible" if use_openai else "Claude"
                 via = "separate VISION endpoint" if use_openai_vision_endpoint else "main model"
                 logger.warning(
-                    "VISION CALL: attachments=%d → client=%s via=%s model=%s",
-                    len(attachments), client_name, via, effective_model
+                    "VISION CALL: attachments=%d → client=OpenAI-compatible via=%s model=%s",
+                    len(attachments), via, effective_model
                 )
         except Exception as e:
-            # Логируем и возвращаем human‑friendly ошибку
-            client_name = "OpenAI" if use_openai else "Claude"
+            client_name = "OpenAI-compatible" if use_openai else "unconfigured"
             logger.exception("%s API ошибка: %s", client_name, e)
             return _user_facing_error(e)
 
@@ -606,9 +600,8 @@ def _run_agent(
 def _run_tools(content_blocks: list[Any], chat_id: int | str) -> list[dict[str, Any]]:
     """Выполнить вызовы инструментов, которые вернула модель.
 
-    Поддерживает как объекты SDK Anthropic (с атрибутами .type/.name/.input),
-    так и dict‑блоки (от openai_client).  Возвращает список результатов
-    с типом tool_result.
+    Поддерживает dict‑блоки (openai_client) и объекты с атрибутами
+    .type/.name/.input. Возвращает список результатов с типом tool_result.
     """
     results: list[dict[str, Any]] = []
     for block in content_blocks:

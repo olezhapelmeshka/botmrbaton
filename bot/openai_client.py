@@ -137,8 +137,7 @@ def create_message(
 ) -> _OpenAIResponse:
     """Сделать один запрос к OpenAI‑совместимому API.
 
-    Параметры аналогичны старому Claude клиенту. Возвращает объект
-    `_OpenAIResponse`.
+    Возвращает объект `_OpenAIResponse` с блоками text / tool_use.
 
     Дополнительно можно передать api_key и base_url — тогда будет создан
     временный клиент (удобно для отдельного vision-эндпоинта).
@@ -163,13 +162,13 @@ def create_message(
     openai_msgs: List[Dict[str, Any]] = []
     if system:
         openai_msgs.append({"role": "system", "content": system})
-    # OpenAI не понимает multimodal блоки так же, как Claude, поэтому конвертируем
+    # Конвертируем внутренние multimodal / tool_result блоки в формат OpenAI
     for msg in messages:
         role = msg.get("role") or "user"
         content = msg.get("content")
 
         # OpenAI/Z.ai принимает только user/assistant/system.
-        # tool_result из Claude-формата превращаем в обычный user-текст.
+        # tool_result (внутренний формат агента) превращаем в обычный user-текст.
         if role not in ("user", "assistant", "system"):
             role = "user"
 
@@ -189,7 +188,7 @@ def create_message(
                             content_parts.append({"type": "text", "text": str(txt)})
 
                     elif btype == "image":
-                        # Claude-style image block from agent.py → convert to OpenAI image_url
+                        # image block from agent.py → OpenAI image_url
                         has_image = True
                         src = b.get("source") or {}
                         media = src.get("media_type") or "image/jpeg"
@@ -298,7 +297,7 @@ def create_message(
                 desc = fn.get("description", "")
                 params = fn.get("parameters") or {"type": "object", "properties": {}}
 
-            # Claude/Anthropic-формат из bot/tools.py
+            # Формат tool schema из bot/tools.py (name/description/input_schema)
             else:
                 name = t.get("name")
                 desc = t.get("description", "")

@@ -1,15 +1,13 @@
 """
 История диалогов по chat_id.
 
-Хранится как list[ {role, content} ] в формате, который принимает
-Anthropic Messages API. content может быть строкой или списком блоков
-(text / tool_use / tool_result), поэтому при сериализации в JSON
-SDK-объекты конвертируем в dict.
+Хранится как list[ {role, content} ]. content — строка или список блоков
+(text / tool_use / tool_result); при сериализации в JSON SDK-объекты
+конвертируем в dict.
 
-Обрезка: считаем «раунд» = последовательность сообщений до финального
-ответа ассистента (без tool_use). Храним последние HISTORY_ROUNDS раундов.
-Это гарантирует, что мы не разорвём пару tool_use → tool_result, иначе
-Claude вернёт 400.
+Обрезка: «раунд» = сообщения до финального ответа ассистента (без tool_use).
+Храним последние HISTORY_ROUNDS раундов, чтобы не разорвать
+пару tool_use → tool_result.
 """
 
 from __future__ import annotations
@@ -43,7 +41,7 @@ def _persist() -> None:
 
 
 def _block_to_dict(block: Any) -> Any:
-    """SDK-объекты Anthropic → dict для JSON."""
+    """SDK/объекты ответа модели → dict для JSON."""
     if hasattr(block, "model_dump"):
         return block.model_dump()
     if isinstance(block, dict):
