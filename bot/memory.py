@@ -228,28 +228,46 @@ def append_assistant_message(memory_obj: dict[str, Any], text: str) -> None:
 def summarize_old_messages(old_messages: list[dict[str, Any]]) -> str:
     """
     Локальная (без вызова модели) сжимающая сводка.
-    Просто склеиваем последние строки в коротком виде.
+
+    Только user-реплики: старые шутки бота не консервируем в summary,
+    иначе модель зацикливается на мемах.
     """
     if not old_messages:
         return ""
     lines: list[str] = []
     for m in old_messages:
-        role = m.get("role", "?")
-        if role == "user":
-            who = m.get("username") or m.get("first_name") or "user"
-            txt = (m.get("text") or "").strip().replace("\n", " ")
-            if len(txt) > 200:
-                txt = txt[:200] + "…"
-            lines.append(f"- {who}: {txt}")
-        elif role == "assistant":
-            txt = (m.get("text") or "").strip().replace("\n", " ")
-            if len(txt) > 200:
-                txt = txt[:200] + "…"
-            lines.append(f"- bot: {txt}")
+        if m.get("role") != "user":
+            continue
+        who = m.get("username") or m.get("first_name") or "user"
+        txt = (m.get("text") or "").strip().replace("\n", " ")
+        if not txt:
+            continue
+        if len(txt) > 200:
+            txt = txt[:200] + "…"
+        lines.append(f"- {who}: {txt}")
     summary = "\n".join(lines)
     if len(summary) > 4000:
         summary = summary[-4000:]
     return summary
+
+
+def sanitize_summary_for_context(summary: str, max_chars: int = 800) -> str:
+    """Убрать bot-строки из уже накопленного summary и укоротить для preamble."""
+    if not summary:
+        return ""
+    kept: list[str] = []
+    for line in summary.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        low = stripped.lower()
+        if low.startswith("- bot:") or low.startswith("bot:") or low.startswith("бот:"):
+            continue
+        kept.append(stripped)
+    text = "\n".join(kept).strip()
+    if len(text) > max_chars:
+        text = text[-max_chars:]
+    return text
 
 
 def trim_memory(memory_obj: dict[str, Any], max_messages: int) -> None:

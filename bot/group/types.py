@@ -8,14 +8,14 @@ rate limiting, and decision making process.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import Enum, auto
+from enum import Enum
 from typing import Any
 
 
 class UserLevel(str, Enum):
     """Hierarchy of user access levels in a group."""
     OWNER = "owner"           # Bot owner (highest privileges)
-    ANASTASIA = "anastasia"   # Special user (Anastasia)
+    VIP = "vip"               # Optional privileged co-user
     TRUSTED = "trusted"       # Whitelisted users
     REGULAR = "regular"       # Normal group members
     RESTRICTED = "restricted" # Users with lowered permissions
@@ -29,7 +29,7 @@ class GateReason(str, Enum):
     REPLY_TO_BOT = "reply_to_bot"
     EXPLICIT_TRIGGER = "explicit_trigger"
     OWNER = "owner"
-    ANASTASIA = "anastasia"
+    VIP = "vip"
     TRUSTED = "trusted"
     CONTEXT_RELEVANT = "context_relevant"      # Smart context match
     PROACTIVE = "proactive"                    # Legacy proactive mode

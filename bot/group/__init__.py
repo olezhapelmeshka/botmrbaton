@@ -7,7 +7,7 @@ Main entry point:
     from bot.group import GroupGate, GroupGateConfig, GateResult
 
 Example:
-    config = GroupGateConfig.family_chat(owner_id=571662006, anastasia_id=...)
+    config = GroupGateConfig.family_chat(owner_id=OWNER_USER_ID, vip_user_id=VIP_USER_ID or None)
     gate = GroupGate(config)
     result = gate.should_process_message(telegram_update["message"])
 """

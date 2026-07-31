@@ -33,7 +33,7 @@ class GroupGateConfig:
     # === Identity ===
     chat_id: int
     owner_id: int
-    anastasia_id: int | None = None
+    vip_user_id: int | None = None
 
     chat_title: str = ""
 
@@ -41,13 +41,12 @@ class GroupGateConfig:
     trusted_user_ids: set[int] = field(default_factory=set)
 
     # === Smart Context Triggers ===
-    # Keywords/phrases that indicate the conversation is relevant to the owners.
+    # Keywords/phrases that indicate the conversation is relevant.
     # If recent messages contain these, the bot becomes more "eager" to respond.
     interest_keywords: list[str] = field(default_factory=lambda: [
         "трейд", "trading", "крипта", "crypto", "btc", "eth", "sol",
         "код", "программирование", "python", "рефакторинг", "архитектура",
-        "логопедия", "логопед", "речь", "дизартрия",
-        "мистер батон", "батон", "окситоцинка", "бот", "нейросеть", "claude", "glm"
+        "мистер батон", "батон", "бот", "нейросеть", "glm",
     ])
 
     context_window_size: int = 12          # How many recent messages to remember for context
@@ -56,7 +55,7 @@ class GroupGateConfig:
     # === Rate Limiting per Level ===
     rate_limits: dict[UserLevel, RateLimitConfig] = field(default_factory=lambda: {
         UserLevel.OWNER:      RateLimitConfig(messages_per_minute=120, burst=30, cooldown_seconds=0),
-        UserLevel.ANASTASIA:  RateLimitConfig(messages_per_minute=60,  burst=15, cooldown_seconds=0),
+        UserLevel.VIP:        RateLimitConfig(messages_per_minute=60,  burst=15, cooldown_seconds=0),
         UserLevel.TRUSTED:    RateLimitConfig(messages_per_minute=30,  burst=8,  cooldown_seconds=1),
         UserLevel.REGULAR:    RateLimitConfig(messages_per_minute=8,   burst=3,  cooldown_seconds=4),
         UserLevel.RESTRICTED: RateLimitConfig(messages_per_minute=3,   burst=1,  cooldown_seconds=15),
@@ -77,15 +76,15 @@ class GroupGateConfig:
     extra: dict[str, Any] = field(default_factory=dict)  # For future features per group
 
     @classmethod
-    def family_chat(cls, owner_id: int, anastasia_id: int | None = None) -> "GroupGateConfig":
-        """Preset for the main family group."""
+    def family_chat(cls, owner_id: int, vip_user_id: int | None = None) -> "GroupGateConfig":
+        """Preset for a lively private/family-style group."""
         return cls(
             chat_id=-1,  # Will be set at runtime
             owner_id=owner_id,
-            anastasia_id=anastasia_id,
+            vip_user_id=vip_user_id,
             trusted_user_ids=set(),
             interest_keywords=[
-                "трейд", "крипта", "код", "python", "логопедия", "бот", "нейросеть"
+                "трейд", "крипта", "код", "python", "бот", "нейросеть"
             ],
             enable_proactive_mode=True,
         )

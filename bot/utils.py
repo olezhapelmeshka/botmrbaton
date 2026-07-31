@@ -7,11 +7,14 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 
 TELEGRAM_LIMIT = 4096
+_TOKEN_RE = re.compile(r"[a-zа-яё0-9]+", re.IGNORECASE)
+_REPEAT_OVERLAP_THRESHOLD = 0.45
 
 
 def load_json(path: Path, default: Any) -> Any:
@@ -49,6 +52,60 @@ def split_for_telegram(text: str, limit: int = TELEGRAM_LIMIT) -> list[str]:
         parts.append(text[:cut].rstrip())
         text = text[cut:].lstrip()
     return parts
+
+
+def normalize_for_overlap(text: str) -> set[str]:
+    """Токены для сравнения ответов (lowercase, без пунктуации)."""
+    if not text:
+        return set()
+    return {t.lower() for t in _TOKEN_RE.findall(text) if len(t) > 1}
+
+
+def token_overlap_ratio(a: str, b: str) -> float:
+    """Jaccard overlap по токенам. 0..1."""
+    ta, tb = normalize_for_overlap(a), normalize_for_overlap(b)
+    if not ta or not tb:
+        return 0.0
+    inter = len(ta & tb)
+    union = len(ta | tb)
+    return inter / union if union else 0.0
+
+
+def is_near_repeat(
+    reply: str,
+    previous_replies: Iterable[str],
+    *,
+    threshold: float = _REPEAT_OVERLAP_THRESHOLD,
+) -> bool:
+    """True если reply почти совпадает с одной из недавних реплик бота."""
+    reply = (reply or "").strip()
+    if not reply or reply.lower() in {"[молчу]", "молчу", "[молчу.]"}:
+        return False
+    # слишком короткие утилитарные ответы не глушим
+    if len(normalize_for_overlap(reply)) < 3:
+        return False
+    for prev in previous_replies:
+        if not prev or not str(prev).strip():
+            continue
+        if token_overlap_ratio(reply, str(prev)) >= threshold:
+            return True
+    return False
+
+
+def recent_assistant_texts(memory_obj: dict[str, Any] | None, n: int = 5) -> list[str]:
+    """Последние N текстов assistant из per-chat memory."""
+    if not memory_obj:
+        return []
+    out: list[str] = []
+    for m in reversed(memory_obj.get("messages") or []):
+        if m.get("role") != "assistant":
+            continue
+        txt = (m.get("text") or "").strip()
+        if txt:
+            out.append(txt)
+        if len(out) >= n:
+            break
+    return out
 
 
 def clean_model_output(text: str) -> str:

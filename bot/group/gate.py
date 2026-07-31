@@ -69,12 +69,12 @@ class GroupGate:
         # === 2. Determine user level ===
         level = get_user_level(user_id, self.config)
 
-        # === 3. Owner and Anastasia bypass most checks ===
+        # === 3. Owner and VIP bypass most checks ===
         if level == UserLevel.OWNER:
             return GateResult(True, GateReason.OWNER, text, level)
 
-        if level == UserLevel.ANASTASIA:
-            return GateResult(True, GateReason.ANASTASIA, text, level)
+        if level == UserLevel.VIP:
+            return GateResult(True, GateReason.VIP, text, level)
 
         # === 4. Rate limiting ===
         if not self.rate_limiter.is_allowed(user_id, level):
@@ -166,6 +166,6 @@ class GroupGate:
         """Legacy trigger words from old system (can be moved to config)."""
         # For backward compatibility with old GROUP_TRIGGER_WORDS
         # In real usage this should come from config.
-        triggers = {"мистер батон", "батон", "окситоцинка", "ботик", "оксито"}
+        from bot.config import GROUP_TRIGGER_WORDS
         low = text.lower()
-        return any(t in low for t in triggers)
+        return any(t in low for t in GROUP_TRIGGER_WORDS)

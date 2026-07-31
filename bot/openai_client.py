@@ -1,21 +1,16 @@
 """
 Обёртка вокруг OpenAI SDK для совместимых моделей (например, GLM‑4.5‑Flash).
 
-Этот модуль использует официальный Python‑клиент `openai` для отправки запросов
-к OpenAI‑совместимым API, таким как OpenRouter или Z.ai PaaS.  В отличие
-от Anthropic, OpenAI возвращает одно сообщение с функциями (tool calls),
-поэтому здесь мы адаптируем ответ к формату, который использует агентный
-слой (список блоков с типами `text` и `tool_use`).
+Использует официальный Python‑клиент `openai` для запросов к OpenAI‑совместимым
+API (OpenRouter, Z.ai и т.д.). Ответ адаптируется к формату агентного слоя
+(блоки `text` / `tool_use`).
 
-Для подключения используйте переменные окружения:
+Для подключения задайте в .env:
 ```
 OPENAI_API_KEY=...
 OPENAI_BASE_URL=https://openrouter.ai/api/v1
 OPENAI_MODEL=glm-4.5-flash
 ```
-
-Если `OPENAI_API_KEY` и `OPENAI_BASE_URL` не заданы, этот модуль не
-инициализируется, и агент использует только Anthropic.
 """
 
 from __future__ import annotations
@@ -46,12 +41,7 @@ _client: Any = None
 
 
 class _OpenAIResponse:
-    """Простая обёртка, имитирующая интерфейс ответа Anthropic SDK.
-
-    Атрибуты:
-        content (list[dict]): список блоков (text / tool_use).
-        stop_reason (str | None): причина остановки ("tool_use" или "stop").
-    """
+    """Обёртка ответа с атрибутами content / stop_reason для агентного слоя."""
 
     def __init__(self, content: List[Dict[str, Any]], stop_reason: str | None) -> None:
         self.content = content
@@ -59,11 +49,7 @@ class _OpenAIResponse:
 
 
 def get_client() -> Any:
-    """Создать и вернуть инстанс клиента OpenAI.
-
-    Если библиотека `openai` не установлена или переменные окружения пусты,
-    вернёт None.  В таком случае следует использовать Anthropic.
-    """
+    """Создать и вернуть инстанс клиента OpenAI, либо None если не настроен."""
     global _client
     if _client is not None:
         return _client

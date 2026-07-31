@@ -208,31 +208,43 @@ def _build_context_preamble(
         if trigger_reason:
             parts.append(f"trigger: {trigger_reason}")
     if memory_obj:
-        summary = (memory_obj.get("summary") or "").strip()
+        from bot.memory import sanitize_summary_for_context
+
+        chat_type = ((user_context or {}).get("chat_type") or "").lower()
+        is_group = chat_type in ("group", "supergroup")
+
+        summary = sanitize_summary_for_context(
+            (memory_obj.get("summary") or "").strip(),
+            max_chars=800,
+        )
         if summary:
             parts.append("summary of older messages:\n" + summary)
+
         msgs = memory_obj.get("messages") or []
         last = msgs[-MAX_HISTORY_MESSAGES_PER_CHAT:]
         # последний элемент — это только что добавленное user-сообщение,
         # не дублируем его в preamble
         last = last[:-1] if last and last[-1].get("role") == "user" else last
         if last:
-            # Показываем в контексте в основном реплики пользователей + максимум 1 последнюю от бота.
-            # Это сильно снижает зацикливание на своих старых шутках ("4 часа картошки" и т.п.).
-            # Реальное количество контролируется MAX_HISTORY_MESSAGES_PER_CHAT в config.
+            # В группах — только user-линии (0 bot), чтобы не зацикливаться на мемах.
+            # В private допускаем максимум 1 последнюю реплику бота.
             lines = ["recent chat history:"]
-            shown_bot = 0
+            bot_candidates: list[str] = []
             for m in last:
                 role = m.get("role")
                 if role == "user":
                     who = m.get("username") or m.get("first_name") or "user"
                     txt = (m.get("text") or "").replace("\n", " ").strip()
-                    lines.append(f"{who}: {txt}")
-                elif role == "assistant" and shown_bot < 1:
+                    if txt:
+                        lines.append(f"{who}: {txt}")
+                elif role == "assistant" and not is_group:
                     txt = (m.get("text") or "").replace("\n", " ").strip()[:140]
-                    lines.append(f"bot (недавно): {txt}")
-                    shown_bot += 1
-            parts.append("\n".join(lines))
+                    if txt:
+                        bot_candidates.append(txt)
+            if not is_group and bot_candidates:
+                lines.append(f"bot (недавно): {bot_candidates[-1]}")
+            if len(lines) > 1:
+                parts.append("\n".join(lines))
     return "\n\n".join(p for p in parts if p)
 
 

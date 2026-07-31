@@ -17,15 +17,15 @@ def get_user_level(user_id: int, config: GroupGateConfig) -> UserLevel:
 
     Order of precedence:
         1. Owner
-        2. Anastasia (special)
+        2. VIP (optional privileged co-user)
         3. Trusted list
         4. Regular (default)
     """
-    if user_id == config.owner_id:
+    if config.owner_id and user_id == config.owner_id:
         return UserLevel.OWNER
 
-    if config.anastasia_id is not None and user_id == config.anastasia_id:
-        return UserLevel.ANASTASIA
+    if config.vip_user_id and user_id == config.vip_user_id:
+        return UserLevel.VIP
 
     if user_id in config.trusted_user_ids:
         return UserLevel.TRUSTED

@@ -52,15 +52,31 @@ def _get_float(name: str, default: float) -> float:
         return default
 
 
+def _get_int_set(name: str) -> frozenset[int]:
+    """Parse comma-separated integers from env (e.g. DEBUG_USER_IDS=1,2,3)."""
+    raw = _get(name, "")
+    if not raw:
+        return frozenset()
+    ids: set[int] = set()
+    for part in raw.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        try:
+            ids.add(int(part))
+        except ValueError:
+            continue
+    return frozenset(ids)
+
+
 # ---- Telegram ----
 TELEGRAM_TOKEN: str = _get("TELEGRAM_BOT_TOKEN")
 
-# Anthropic (Claude) полностью удалён из проекта.
-# Бот работает только через OpenAI-совместимые API (GLM + Gemini).
+# Бот работает через OpenAI-совместимые API (GLM, OpenRouter, Gemini и т.д.).
 
 # ---- Models ----
-MODEL_FAST: str = _get("MODEL_FAST", "claude-haiku-4.5")
-MODEL_SMART: str = _get("MODEL_SMART", "claude-sonnet-4.7")
+MODEL_FAST: str = _get("MODEL_FAST", "glm-4.5-flash")
+MODEL_SMART: str = _get("MODEL_SMART", "glm-4.5-flash")
 
 # ---- OpenAI / GLM (optional) ----
 #
@@ -96,8 +112,12 @@ TEMPERATURE: float = _get_float("TEMPERATURE", 0.65)
 # Выше температура = более живая, дерзкая, непредсказуемая речь (Grok-style).
 # При 0.85+ бот становится разговорчивее и саркастичнее, но tool calling может быть чуть менее стабильным.
 
-# ---- Debug / Access ----
-DEBUG_USER_IDS: frozenset[int] = frozenset({571662006})
+# ---- Access / identity (set in .env — never hardcode personal Telegram IDs) ----
+OWNER_USER_ID: int = _get_int("OWNER_USER_ID", 0)
+VIP_USER_ID: int = _get_int("VIP_USER_ID", 0)  # optional privileged co-user (0 = unset)
+DEBUG_USER_IDS: frozenset[int] = _get_int_set("DEBUG_USER_IDS")
+if OWNER_USER_ID and OWNER_USER_ID not in DEBUG_USER_IDS:
+    DEBUG_USER_IDS = frozenset(set(DEBUG_USER_IDS) | {OWNER_USER_ID})
 
 # ---- Memory / Context (очень сильно влияет на поведение бота) ----
 #
@@ -130,7 +150,7 @@ DEBUG_USER_IDS: frozenset[int] = frozenset({571662006})
 #   MAX_HISTORY_MESSAGES_PER_CHAT=5
 #   MAX_CONTEXT_CHARS=6000
 HISTORY_ROUNDS: int = _get_int("HISTORY_ROUNDS", 10)
-MAX_HISTORY_MESSAGES_PER_CHAT: int = _get_int("MAX_HISTORY_MESSAGES_PER_CHAT", 8)
+MAX_HISTORY_MESSAGES_PER_CHAT: int = _get_int("MAX_HISTORY_MESSAGES_PER_CHAT", 5)
 MAX_CONTEXT_CHARS: int = _get_int("MAX_CONTEXT_CHARS", 8000)
 
 # ---- Limits ----
@@ -139,20 +159,24 @@ MAX_CONTEXT_CHARS: int = _get_int("MAX_CONTEXT_CHARS", 8000)
 RESPECT_GLM_8K_LIMIT: bool = _get("RESPECT_GLM_8K_LIMIT", "true").lower() in ("true", "1", "yes")
 
 # ---- Group / multi-chat ----
-BOT_USERNAME: str = _get("BOT_USERNAME", "oxytocinkabot")
+BOT_USERNAME: str = _get("BOT_USERNAME", "")
+
+# Comma-separated interest keywords for group context relevance (optional override).
+_DEFAULT_INTEREST_KEYWORDS = [
+    "трейд", "trading", "крипта", "crypto", "btc", "eth", "sol",
+    "код", "программирование", "python", "рефакторинг", "архитектура",
+    "бот", "нейросеть", "glm",
+]
+_interest_raw = _get("GROUP_INTEREST_KEYWORDS", "")
+GROUP_INTEREST_KEYWORDS: list[str] = (
+    [p.strip() for p in _interest_raw.split(",") if p.strip()]
+    if _interest_raw
+    else list(_DEFAULT_INTEREST_KEYWORDS)
+)
 
 GROUP_TRIGGER_WORDS: list[str] = [
-    # новые имена
     "мистер батон", "мр батон", "батон", "mr baton", "mister baton",
     "батончик",
-
-    # старые имена (для обратной совместимости)
-    "окситоцинка", "окситоцинк", "оксито", "оксик", "окси",
-    "окситоцинка бот", "oxytocinkabot", "@oxytocinkabot",
-
-    "ребеночек", "ребёночек", "ребенок", "ребёнок",
-    "детка", "дитя", "чадо",
-
     "ботик", "ботяра", "бот",
 ]
 
@@ -196,9 +220,8 @@ LOG_LEVEL: str = _get("LOG_LEVEL", "INFO").upper()
 def validate() -> None:
     """Проверка обязательных параметров перед стартом.
 
-    Для работы бота требуется ключ хотя бы одной модели — Anthropic (Claude)
-    или OpenAI‑совместимого провайдера (например, GLM через OpenRouter). Если
-    оба ключа отсутствуют, бот не сможет обрабатывать запросы.
+    Нужны TELEGRAM_BOT_TOKEN и OpenAI-совместимый ключ (текст и/или vision).
+    OWNER_USER_ID рекомендуется для группового gate (привилегии владельца).
     """
     missing: list[str] = []
     if not TELEGRAM_TOKEN:
@@ -213,6 +236,12 @@ def validate() -> None:
             "Не заданы обязательные переменные в .env: "
             + ", ".join(missing)
             + ". Скопируйте .env.example в .env и заполните значения."
+        )
+    if not OWNER_USER_ID:
+        import warnings
+        warnings.warn(
+            "OWNER_USER_ID не задан в .env — владелец не получит bypass в группах.",
+            stacklevel=2,
         )
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     WORKSPACE_DIR.mkdir(parents=True, exist_ok=True)

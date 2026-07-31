@@ -5,6 +5,9 @@ env/
 
 # Игнорируем настройки IDE
 .idea/
+.DS_Store
+**/.DS_Store
+
 
 # Игнорируем кеши Python
 __pycache__/
@@ -18,9 +21,8 @@ __pycache__/
 # но НЕ игнорируем шаблон
 !.env.example
 
-# Игнорируем локальные данные (всё runtime, личные чаты, напоминания и т.д.)
-data/
-# Разрешаем закоммитить только маркер (чтобы папка существовала в репо)
+# Игнорируем локальные данные (runtime), но держим data/ в репо через .gitkeep
+data/*
 !data/.gitkeep
 
 # Логи и временные файлы
@@ -30,11 +32,3 @@ tmp/
 *.tmp
 *.bak
 
-# Дополнительно — на случай старых установок
-data/memory.json
-data/notebook.json
-data/workspace.json
-data/files/
-data/schedules/
-data/interests/
-data/youtube_*/

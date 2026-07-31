@@ -28,12 +28,20 @@ class RateLimiter:
 
     def __init__(self, config: GroupGateConfig):
         self.config = config
-        self._buckets: Dict[int, _UserBucket] = defaultdict(
-            lambda: _UserBucket(tokens=0.0, last_update=time.time())
-        )
+        self._buckets: Dict[int, _UserBucket] = {}
 
     def _get_limit(self, level: UserLevel) -> RateLimitConfig:
         return self.config.rate_limits.get(level, self.config.rate_limits[UserLevel.REGULAR])
+
+    def _get_bucket(self, user_id: int, level: UserLevel) -> _UserBucket:
+        """New users start with a full burst so the first message is never blocked."""
+        if user_id not in self._buckets:
+            limit = self._get_limit(level)
+            self._buckets[user_id] = _UserBucket(
+                tokens=float(limit.burst),
+                last_update=time.time(),
+            )
+        return self._buckets[user_id]
 
     def is_allowed(self, user_id: int, level: UserLevel) -> bool:
         """
@@ -41,7 +49,7 @@ class RateLimiter:
         If allowed, consumes one token.
         """
         limit = self._get_limit(level)
-        bucket = self._buckets[user_id]
+        bucket = self._get_bucket(user_id, level)
         now = time.time()
 
         # Refill tokens

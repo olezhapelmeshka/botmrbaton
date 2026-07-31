@@ -4,7 +4,7 @@
 
 Типы апдейтов:
 - text    → обычный диалог или команда
-- photo   → vision (base64 в Claude, плейсхолдер в memory)
+- photo   → vision (base64 в текущий запрос, плейсхолдер в memory)
 - document → скачать → workspace → агент вызывает read_file сам
 - остальное → вежливый отказ
 """
@@ -45,7 +45,12 @@ def _looks_like_reminder_request(text: str) -> bool:
     if re.search(r"в\s+\d{1,2}\s*(утра|вечера|дня)", t) and "напомн" in t:
         return True
     return False
-from bot.utils import clean_model_output, sanitize_vision_denial
+from bot.utils import (
+    clean_model_output,
+    is_near_repeat,
+    recent_assistant_texts,
+    sanitize_vision_denial,
+)
 from bot.storage import get_user_tag
 from bot.config import (
     BOT_USERNAME, GROUP_ALLOW_REPLY_TRIGGER, GROUP_TRIGGER_WORDS,
@@ -158,7 +163,10 @@ def _legacy_parse_single_reminder(text: str) -> list[dict]:
     return []
 
 
-def _postprocess_group_reply(text: str) -> str:
+def _postprocess_group_reply(
+    text: str,
+    chat_memory: dict | None = None,
+) -> str:
     """Лёгкий пост-процессинг ответов в группах для соблюдения стиля."""
     if not text:
         return text
@@ -168,6 +176,10 @@ def _postprocess_group_reply(text: str) -> str:
 
     # Жёсткая защита: никогда не показываем пользователю "я не вижу картинки"
     text = sanitize_vision_denial(text)
+
+    # Анти-повтор мемов: почти тот же ответ что недавно → молчим
+    if is_near_repeat(text, recent_assistant_texts(chat_memory, n=5)):
+        return "[молчу]"
 
     # Принудительно маленькие буквы (кроме специальных случаев)
     if text:
@@ -215,7 +227,7 @@ HELP_TEXT = (
 
 START_TEXT = (
     "привет. я Мистер Батон.\n"
-    "работаю на разных моделях (GLM + Claude) и умею:\n"
+    "работаю на OpenAI-совместимых моделях (GLM + vision) и умею:\n"
     "• отвечать на вопросы и искать в интернете\n"
     "• читать и создавать файлы (PDF, DOCX, XLSX...)\n"
     "• смотреть картинки (vision)\n"
@@ -345,17 +357,18 @@ def _handle_command(chat_id: int, text: str, chat_type: str = "private", user: d
 
 
 _MODEL_NAMES = {
-    MODEL_FAST: "Haiku 🐦",
-    MODEL_SMART: "Sonnet 🎵",
-    OPENAI_MODEL: "GLM (fast) ⚡",
+    MODEL_FAST: f"Fast ({MODEL_FAST})",
+    MODEL_SMART: f"Smart ({MODEL_SMART})",
+    OPENAI_MODEL: f"Default ({OPENAI_MODEL})",
 }
 
 
 def _handle_model_command(chat_id: int, arg: str) -> bool:
     model_map = {
-        "haiku": MODEL_FAST,
-        "sonnet": MODEL_SMART,
+        "fast": MODEL_FAST,
+        "smart": MODEL_SMART,
         "glm": OPENAI_MODEL,
+        "default": OPENAI_MODEL,
     }
 
     if arg == "current":
@@ -363,36 +376,36 @@ def _handle_model_command(chat_id: int, arg: str) -> bool:
         if current:
             telegram_api.send_message(chat_id, f"Текущая модель: {_MODEL_NAMES.get(current, current)}")
         else:
-            telegram_api.send_message(chat_id, "Модель выбирается автоматически (авто-роутинг) 🤖")
+            telegram_api.send_message(chat_id, "Модель выбирается автоматически (авто-роутинг)")
         return True
 
     if arg in model_map:
         model = model_map[arg]
         agent.set_user_model(chat_id, model)
-        telegram_api.send_message(chat_id, f"Модель: {_MODEL_NAMES.get(model, model)} ✅")
+        telegram_api.send_message(chat_id, f"Модель: {_MODEL_NAMES.get(model, model)}")
         return True
 
     if arg == "auto":
         agent.set_user_model(chat_id, None)
-        telegram_api.send_message(chat_id, "Авто-роутинг включён 🤖")
+        telegram_api.send_message(chat_id, "Авто-роутинг включён")
         return True
 
-    # Показываем кнопки выбора
     keyboard = [
         [
-            {"text": "Haiku 🐦 (быстрый)", "callback_data": "model:haiku"},
-            {"text": "Sonnet 🎵 (умный)", "callback_data": "model:sonnet"},
+            {"text": "Fast", "callback_data": "model:fast"},
+            {"text": "Smart", "callback_data": "model:smart"},
         ],
         [
-            {"text": "Авто 🤖", "callback_data": "model:auto"},
+            {"text": "Default (GLM)", "callback_data": "model:glm"},
+            {"text": "Auto", "callback_data": "model:auto"},
         ],
         [
-            {"text": "📊 Текущая модель", "callback_data": "model:current"},
+            {"text": "Текущая модель", "callback_data": "model:current"},
         ],
     ]
     telegram_api.send_message_with_keyboard(
         chat_id,
-        "Выбери модель Claude:",
+        "Выбери модель:",
         keyboard,
     )
     return True
@@ -410,27 +423,31 @@ def _handle_callback_query(callback_query: dict) -> None:
     if data.startswith("model:"):
         arg = data[6:]
         model_map = {
+            "fast": MODEL_FAST,
+            "smart": MODEL_SMART,
+            "glm": OPENAI_MODEL,
+            "default": OPENAI_MODEL,
+            # legacy callback ids
             "haiku": MODEL_FAST,
             "sonnet": MODEL_SMART,
-            "glm": OPENAI_MODEL,
         }
         if arg == "current":
             current = agent.get_user_model(chat_id)
             if current:
                 answer_text = f"Сейчас: {_MODEL_NAMES.get(current, current)}"
             else:
-                answer_text = "Сейчас: авто-роутинг 🤖"
+                answer_text = "Сейчас: авто-роутинг"
             telegram_api.answer_callback_query(cq_id, answer_text)
         elif arg == "auto":
             agent.set_user_model(chat_id, None)
-            telegram_api.answer_callback_query(cq_id, "Авто-роутинг включён 🤖")
-            telegram_api.send_message(chat_id, "Авто-роутинг включён 🤖")
+            telegram_api.answer_callback_query(cq_id, "Авто-роутинг включён")
+            telegram_api.send_message(chat_id, "Авто-роутинг включён")
         elif arg in model_map:
             model = model_map[arg]
             agent.set_user_model(chat_id, model)
             label = _MODEL_NAMES.get(model, model)
-            telegram_api.answer_callback_query(cq_id, f"{label} ✅")
-            telegram_api.send_message(chat_id, f"Модель: {label} ✅")
+            telegram_api.answer_callback_query(cq_id, f"{label}")
+            telegram_api.send_message(chat_id, f"Модель: {label}")
         else:
             telegram_api.answer_callback_query(cq_id, "Неизвестная опция")
 
@@ -689,7 +706,7 @@ def _process_message_inner(
                     logger.info("[REMINDER] early direct scheduled %d chat=%s", created, chat_id)
                     reply = "ок, поставил." if created == 1 else f"ок, поставил {created}."
                     if chat_type in ("group", "supergroup"):
-                        reply = _postprocess_group_reply(reply)
+                        reply = _postprocess_group_reply(reply, chat_memory)
                     else:
                         reply = sanitize_vision_denial(reply)
                     telegram_api.send_message(chat_id, reply)
@@ -697,7 +714,7 @@ def _process_message_inner(
                     if chat_memory:
                         try:
                             memory.append_assistant_message(chat_memory, reply)
-                            memory.trim_memory(chat_memory, 8)
+                            memory.trim_memory(chat_memory, MAX_HISTORY_MESSAGES_PER_CHAT)
                             memory.save_chat_memory(chat_memory)
                         except Exception:
                             pass
@@ -743,7 +760,7 @@ def _process_message_inner(
 
         # === Структурная маршрутизация (новая система) ===
         # Для семейных групп: если decider сказал "casual" и нет вложений — идём лёгким путём
-        # (без TOOLS_SCHEMA, без тяжёлого research-промпта, с быстрым recovery на Claude).
+        # (без TOOLS_SCHEMA, без тяжёлого research-промпта).
         use_light = (
             chat_type in ("group", "supergroup")
             and suggested_path == "casual"
@@ -825,14 +842,14 @@ def _process_message_inner(
                 tool_call_callback=_on_tool_call,
             )
 
-        # В proactive режиме модель может решить промолчать
-        silent = reply.strip().lower() in {"[молчу]", "молчу", "[молчу.]", "[молчу]"}
-
         if chat_type in ("group", "supergroup"):
-            reply = _postprocess_group_reply(reply)
+            reply = _postprocess_group_reply(reply, chat_memory)
         else:
             # Для приватных чатов тоже защищаем от vision-denial фраз
             reply = sanitize_vision_denial(reply)
+
+        # После пост-процесса (в т.ч. anti-repeat → [молчу])
+        silent = reply.strip().lower() in {"[молчу]", "молчу", "[молчу.]"}
 
         # Удаляем временные статусные сообщения (что искал)
         for mid in temp_status_ids:
@@ -842,7 +859,7 @@ def _process_message_inner(
                 pass
 
         if silent:
-            logger.info("group proactive: модель решила промолчать (chat=%s)", chat_id)
+            logger.info("group: молчим (модель или anti-repeat) chat=%s", chat_id)
         else:
             telegram_api.send_message(chat_id, reply)
             logger.info("→ chat=%s len=%d", chat_id, len(reply))
@@ -878,15 +895,10 @@ def run() -> None:
     try:
         gate_config = GroupGateConfig(
             chat_id=0,
-            owner_id=571662006,
-            anastasia_id=123456789,  # ← замени на реальный ID
+            owner_id=config.OWNER_USER_ID,
+            vip_user_id=config.VIP_USER_ID or None,
             trusted_user_ids=set(),
-            interest_keywords=[
-                "трейд", "trading", "крипта", "crypto", "btc", "eth",
-                "код", "python", "рефакторинг", "архитектура",
-                "логопедия", "логопед", "речь",
-                "бот", "нейросеть", "claude", "glm"
-            ],
+            interest_keywords=list(config.GROUP_INTEREST_KEYWORDS),
             enable_proactive_mode=config.GROUP_PROACTIVE_MODE,
         )
         gate_config.extra["bot_username"] = _bot_username

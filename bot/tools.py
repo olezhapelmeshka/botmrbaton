@@ -277,6 +277,8 @@ def _dispatch(name, tool_input, chat_id):
             return _r({"error": f"Ошибка анализа видео: {e}"})
         return _r(result)
 
+    return _r({"error": f"Unknown tool: {name}"})
+
 def _r(payload): return payload if isinstance(payload, str) else json.dumps(payload, ensure_ascii=False)
 def _short(data, n=120):
     s = json.dumps(data, ensure_ascii=False) if not isinstance(data, str) else data
