@@ -1,9 +1,11 @@
 # Мистер Батон
 
-Публичный Telegram-бот с характером: болтает в личке и группах, ищет в интернете, смотрит картинки, работает с файлами и ставит напоминания.
+**Бесплатный** способ сделать себе Telegram-ассистента с характером: без подписки на ChatGPT, без своего GPU — только открытый код + бесплатные/дешёвые API (GLM на Z.ai, vision через OpenRouter).
+
+Болтает в личке и группах, ищет в интернете, смотрит картинки, работает с файлами и ставит напоминания.
 
 **Открыть бота:** [t.me/misterbatonbot](https://t.me/misterbatonbot)  
-Можно писать сразу или добавить в группу как обычного бота.
+Можно писать сразу или добавить в группу как обычного бота. Свой инстанс поднимается за пару минут по инструкции ниже.
 
 ---
 
@@ -17,7 +19,7 @@
 - файлы PDF / DOCX / XLSX / …  
 - блокнот и напоминания  
 
-Код открыт — можно поднять своего бота за пару минут.
+Весь стек рассчитан на **$0** (или почти $0): текст — `glm-4.5-flash` на Z.ai, картинки — `google/gemini-2.5-flash` на OpenRouter. Код открыт (MIT).
 
 ---
 
@@ -112,10 +114,46 @@ bash scripts/install_launchagent.sh
 
 ---
 
-<details>
-<summary>Для разработчиков (EN / архитектура)</summary>
+## Краткая история проекта
 
-**EN:** Telegram character-agent with tool use, dual-path group intelligence, OpenAI-compatible multi-model routing (text + vision). MIT.
+- **Июнь 2026** — первая рабочая версия: личный Telegram-бот с характером, памятью, инструментами и групповым gate; пре-релиз на GitHub.  
+- **Июль 2026** — публичный релиз для портфолио: обезличенные промпты, MIT, тесты/CI, анти-зацикливание на мемах, README с пошаговым бесплатным стеком (Z.ai + OpenRouter), живой [@misterbatonbot](https://t.me/misterbatonbot).
+
+Идея с самого начала: показать, что нормальный AI-ассистент в Telegram можно собрать **бесплатно** на открытых моделях, без корпоративного «helpdesk»-тона.
+
+---
+
+# Mr. Baton (English)
+
+A **free** way to run your own Telegram AI assistant: open-source code + free/cheap OpenAI-compatible APIs (GLM on Z.ai for text, Gemini on OpenRouter for vision). No ChatGPT subscription, no GPU required.
+
+**Try it live:** [t.me/misterbatonbot](https://t.me/misterbatonbot)  
+**License:** MIT
+
+## What it is
+
+Not a corporate helpdesk bot — a character-first chat agent with real tooling:
+
+| Capability | Details |
+|------------|---------|
+| Chat + memory | Per-chat history, anti-repeat hygiene |
+| Web search | DuckDuckGo HTML (no extra API key) |
+| Vision | Separate multimodal endpoint for photos |
+| Files | Read/create PDF, DOCX, XLSX, TXT, MD, CSV, JSON, PPTX |
+| Notebook & reminders | Per-chat notes; once / daily / weekly / interval |
+| Group intelligence | Gate → LLM “should I reply?” → `casual` or full `agent` path |
+
+## Free stack (recommended)
+
+| Role | Provider | Where to get the key | Model ID | Base URL |
+|------|----------|----------------------|----------|----------|
+| Text | [Z.ai](https://z.ai/model-api) | [API Keys](https://z.ai/manage-apikey/apikey-list) | `glm-4.5-flash` | `https://api.z.ai/api/paas/v4` |
+| Vision | [OpenRouter](https://openrouter.ai) | [Keys](https://openrouter.ai/keys) | `google/gemini-2.5-flash` | `https://openrouter.ai/api/v1` |
+| Bot token | Telegram | [@BotFather](https://t.me/BotFather) | — | — |
+
+Free tiers still have rate limits — that is expected. For a personal or small-group assistant this stack is enough to run at **$0**.
+
+## Architecture
 
 ```mermaid
 flowchart TD
@@ -124,15 +162,41 @@ flowchart TD
   Decider -->|casual| Light[light_responder]
   Decider -->|agent| Agent[agent loop]
   Agent --> Tools[tools.dispatch]
-  Agent --> LLM[text model]
-  Agent --> Vision[vision model]
+  Agent --> LLM[text model GLM]
+  Agent --> Vision[vision model Gemini]
   Light --> LLM
+  Tools --> Search[DuckDuckGo]
+  Tools --> Files[workspace]
+  Tools --> Notes[notebook]
+  Tools --> Reminders[scheduler]
 ```
+
+More detail: [docs/architecture.md](docs/architecture.md).
+
+## Quick start
+
+```bash
+git clone https://github.com/olezhapelmeshka/botmrbaton.git
+cd botmrbaton
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+bash scripts/setup_env.sh    # or copy .env.example → .env and fill keys
+python bot/main.py
+```
+
+macOS always-on (login + crash restart):
+
+```bash
+bash scripts/install_launchagent.sh
+```
+
+Tests:
 
 ```bash
 pytest -q
 ```
 
-См. также [docs/architecture.md](docs/architecture.md).
+## Project history
 
-</details>
+- **June 2026** — first working personal bot (character prompts, tools, group gate); pre-release on GitHub.  
+- **July 2026** — public portfolio release: depersonalized prompts, MIT, CI/tests, anti-meme looping, free-stack docs, live [@misterbatonbot](https://t.me/misterbatonbot).
