@@ -267,5 +267,3 @@ bash scripts/install_launchagent.sh
 - **July 2026** — public portfolio release: depersonalized prompts, MIT, tests/CI, anti-meme looping, README with a free stack walkthrough (Z.ai + OpenRouter), live [@misterbatonbot](https://t.me/misterbatonbot).
 
 The idea from day one: show that a normal AI assistant in Telegram can be built **for free** on open models, without a corporate helpdesk tone.
-
-Built with ❤️ by [olezhapelmeshka](https://github.com/olezhapelmeshka) and developed by [Claude Code](https://claude.com/claude-code) 🤖
