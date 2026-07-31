@@ -29,14 +29,14 @@
 
 Пример общения в личных сообщениях:
 
-<img width="65" height="128" alt="telegram-cloud-photo-size-2-5431466302120859483-y" src="https://github.com/user-attachments/assets/37cfd1c7-01ce-4611-9d21-2526f6b7e2e4" />
-<img width="65" height="128" alt="telegram-cloud-photo-size-2-5431466302120859484-y" src="https://github.com/user-attachments/assets/bfd86a4d-389b-475d-bc3a-f3a5a45dd192" />
+<img width="300" height="800" alt="telegram-cloud-photo-size-2-5431466302120859483-y" src="https://github.com/user-attachments/assets/37cfd1c7-01ce-4611-9d21-2526f6b7e2e4" />
+<img width="300" height="800" alt="telegram-cloud-photo-size-2-5431466302120859484-y" src="https://github.com/user-attachments/assets/bfd86a4d-389b-475d-bc3a-f3a5a45dd192" />
 
 Пример общения в группе:
 
-<img width="65" height="128" alt="telegram-cloud-photo-size-2-5431466302120859488-y" src="https://github.com/user-attachments/assets/6752fd1c-9333-4d7f-be77-f4dc443c8603" />
-<img width="65" height="128" alt="telegram-cloud-photo-size-2-5431466302120859489-y" src="https://github.com/user-attachments/assets/52b622bc-1a8a-4740-8468-ea6ed333a3f5" />
-<img width="65" height="128" alt="telegram-cloud-photo-size-2-5431466302120859490-y" src="https://github.com/user-attachments/assets/ee63a16e-cf8d-4ae6-a453-692520077d1e" />
+<img width="300" height="800" alt="telegram-cloud-photo-size-2-5431466302120859488-y" src="https://github.com/user-attachments/assets/6752fd1c-9333-4d7f-be77-f4dc443c8603" />
+<img width="300" height="800" alt="telegram-cloud-photo-size-2-5431466302120859489-y" src="https://github.com/user-attachments/assets/52b622bc-1a8a-4740-8468-ea6ed333a3f5" />
+<img width="300" height="800" alt="telegram-cloud-photo-size-2-5431466302120859490-y" src="https://github.com/user-attachments/assets/ee63a16e-cf8d-4ae6-a453-692520077d1e" />
 
 ---
 
