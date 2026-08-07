@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Deploy Mr. Baton to VPS in a SEPARATE folder from abnormal_signal_bot.
-# Host pattern from abnormal_signal_bot docs: root@89.127.196.166
+# Deploy Mr. Baton to a host supplied by the operator.
+# Nothing in this script identifies a particular server or account.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-HOST="${DEPLOY_HOST:-root@89.127.196.166}"
-REMOTE_DIR="${DEPLOY_DIR:-/root/misterbaton_bot}"
+HOST="${DEPLOY_HOST:?Set DEPLOY_HOST, for example botuser@example-host}"
+REMOTE_DIR="${DEPLOY_DIR:?Set DEPLOY_DIR, for example /opt/misterbaton}"
 UNIT_NAME="misterbaton"
 
 echo "==> Target: $HOST:$REMOTE_DIR (unit: $UNIT_NAME)"

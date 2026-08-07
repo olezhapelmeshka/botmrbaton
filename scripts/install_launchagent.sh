@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install macOS LaunchAgent so @misterbatonbot restarts on login/crash.
+# Install a macOS LaunchAgent so Mr. Baton restarts on login/crash.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PLIST_SRC="$ROOT/scripts/com.misterbaton.bot.plist.template"
