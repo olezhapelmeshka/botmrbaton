@@ -26,6 +26,12 @@ safety limits rather than a plain chat wrapper.
 
 `Python` · `Telegram Bot API` · `OpenAI-compatible LLM APIs` · `pytest` · `SQLite` · `systemd`
 
+### Development tooling
+
+The current public version was developed primarily with **Codex in ChatGPT (GPT-5.5)**. Early
+prototype work in April–May used **Cursor with Claude Sonnet 4.6**. Product decisions,
+integration, testing, and final acceptance remained my responsibility.
+
 ### Quick start
 
 ```bash
@@ -80,6 +86,12 @@ LLM-интеграции: не просто чат, а связка памяти
 ### Технологии
 
 `Python` · `Telegram Bot API` · `OpenAI-compatible LLM APIs` · `pytest` · `SQLite` · `systemd`
+
+### Инструменты разработки
+
+Текущая публичная версия разрабатывалась преимущественно с **Codex в ChatGPT (GPT-5.5)**. На
+раннем этапе прототипа в апреле–мае использовался **Cursor с Claude Sonnet 4.6**. Решения по
+продукту, интеграция, тестирование и финальная приёмка оставались моей ответственностью.
 
 ### Быстрый запуск
 
