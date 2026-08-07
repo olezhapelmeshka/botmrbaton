@@ -1,9 +1,64 @@
 # Mr. Baton
 
-> Telegram AI-ассистент с характером: диалог, инструменты, поиск, vision, файлы и напоминания.
+> A Telegram AI assistant with personality: chat, tools, search, vision, files, and reminders.
 
 [![Python](https://img.shields.io/badge/Python-3.9%2B-3776AB)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+## English
+
+### About
+
+Mr. Baton is a self-hosted Telegram AI assistant with per-chat memory, tool use, and deliberate
+group behavior. It is a hands-on LLM integration project: routing, state, external APIs, and
+safety limits rather than a plain chat wrapper.
+
+### Features
+
+- private and group chats with per-chat memory;
+- tool use for web search, files, notes, and reminders;
+- vision through a separate OpenAI-compatible endpoint;
+- routing between a lightweight responder and an agent path;
+- group gate, anti-spam, cooldowns, and anti-loop protection;
+- local runtime storage with TTL.
+
+### Stack
+
+`Python` · `Telegram Bot API` · `OpenAI-compatible LLM APIs` · `pytest` · `SQLite` · `systemd`
+
+### Quick start
+
+```bash
+git clone https://github.com/olezhapelmeshka/botmrbaton.git
+cd botmrbaton
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+```
+
+Fill the **local-only** `.env` with your own Telegram token, user IDs, and provider keys, then run:
+
+```bash
+python bot/main.py
+pytest -q
+```
+
+See [docs/architecture.md](docs/architecture.md) for the component map.
+
+### Safety boundary
+
+`.env`, runtime data, logs, and temporary files are ignored by Git. The repository contains an
+empty [.env.example](.env.example) only. Never commit Telegram tokens, provider keys, user chats,
+uploaded files, or production configuration.
+
+### Status
+
+**Portfolio prototype / self-hosted.** Core memory, group-gate, tool-dispatch, and reminder
+scenarios are covered by tests. This repository is intended for a personal self-hosted instance,
+not a public SaaS service.
+
+---
 
 ## Русский
 
@@ -58,58 +113,3 @@ pytest -q
 **Portfolio prototype / self-hosted.** Основные сценарии — память, group gate, dispatch
 инструментов и напоминания — покрыты тестами. Репозиторий предназначен для собственного запуска,
 а не как публичный SaaS-сервис.
-
----
-
-## English
-
-### About
-
-Mr. Baton is a self-hosted Telegram AI assistant with per-chat memory, tool use, and deliberate
-group behavior. It is a hands-on LLM integration project: routing, state, external APIs, and
-safety limits rather than a plain chat wrapper.
-
-### Features
-
-- private and group chats with per-chat memory;
-- tool use for web search, files, notes, and reminders;
-- vision through a separate OpenAI-compatible endpoint;
-- routing between a lightweight responder and an agent path;
-- group gate, anti-spam, cooldowns, and anti-loop protection;
-- local runtime storage with TTL.
-
-### Stack
-
-`Python` · `Telegram Bot API` · `OpenAI-compatible LLM APIs` · `pytest` · `SQLite` · `systemd`
-
-### Quick start
-
-```bash
-git clone https://github.com/olezhapelmeshka/botmrbaton.git
-cd botmrbaton
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env
-```
-
-Fill the **local-only** `.env` with your own Telegram token, user IDs, and provider keys, then run:
-
-```bash
-python bot/main.py
-pytest -q
-```
-
-See [docs/architecture.md](docs/architecture.md) for the component map.
-
-### Safety boundary
-
-`.env`, runtime data, logs, and temporary files are ignored by Git. The repository contains an
-empty [.env.example](.env.example) only. Never commit Telegram tokens, provider keys, user chats,
-uploaded files, or production configuration.
-
-### Status
-
-**Portfolio prototype / self-hosted.** Core memory, group-gate, tool-dispatch, and reminder
-scenarios are covered by tests. This repository is intended for a personal self-hosted instance,
-not a public SaaS service.
